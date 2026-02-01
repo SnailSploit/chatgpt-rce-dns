@@ -1,0 +1,29 @@
+2025-02-28 21:15:12 - [INFO] /mnt/data/script_logic.pkl found. Proceeding with deserialization.
+2025-02-28 21:15:12 - [TEST PASSED] Successfully loaded script_logic.pkl
+2025-02-28 21:15:12 - [INFO] Restored marshaled data from pickled file.
+2025-02-28 21:15:12 - [TEST PASSED] Successfully unmarshaled script logic.
+2025-02-28 21:15:12 - [TEST OUTPUT] {'placeholder': True}
+2025-02-28 21:16:56 - [INFO] /mnt/data/script_logic.pkl found. Proceeding with deserialization.
+2025-02-28 21:16:56 - [TEST PASSED] Successfully loaded script_logic.pkl
+2025-02-28 21:16:56 - [INFO] Restored marshaled data from pickled file.
+2025-02-28 21:16:56 - [TEST PASSED] Successfully unmarshaled script logic.
+2025-02-28 21:16:56 - [TEST OUTPUT] {'placeholder': True}
+2025-02-28 21:17:27 - [INFO] /mnt/data/script_logic.pkl found. Proceeding with deserialization.
+2025-02-28 21:17:27 - [TEST PASSED] Successfully loaded script_logic.pkl
+2025-02-28 21:17:27 - [INFO] Restored marshaled data from pickled file.
+2025-02-28 21:17:27 - [TEST PASSED] Successfully unmarshaled script logic.
+2025-02-28 21:17:27 - [TEST OUTPUT] {'placeholder': True}
+2025-02-28 21:17:48 - [ERROR] Failed to send webhook notification: HTTPSConnectionPool(host='webhook.site', port=443): Max retries exceeded with url: /aec8cc92-c013-4782-ad20-25e67c12b582 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7eadab0e99e0>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+2025-02-28 21:19:54 - [INFO] /mnt/data/script_logic.pkl found. Proceeding with deserialization.
+2025-02-28 21:19:54 - [TEST PASSED] Successfully loaded script_logic.pkl
+2025-02-28 21:19:54 - [INFO] Restored marshaled data from pickled file.
+2025-02-28 21:19:54 - [TEST PASSED] Successfully unmarshaled script logic.
+2025-02-28 21:19:54 - [TEST OUTPUT] {'placeholder': True}
+2025-02-28 21:20:14 - [ERROR] Failed to send webhook notification: HTTPSConnectionPool(host='webhook.site', port=443): Max retries exceeded with url: /aec8cc92-c013-4782-ad20-25e67c12b582 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7eadaa58c8a0>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+2025-02-28 21:23:35 - [INFO] /mnt/data/script_logic.pkl found. Proceeding with deserialization.
+2025-02-28 21:23:35 - [TEST PASSED] Successfully loaded script_logic.pkl
+2025-02-28 21:23:35 - [INFO] Restored marshaled data from pickled file.
+2025-02-28 21:23:35 - [TEST PASSED] Successfully unmarshaled script logic.
+2025-02-28 21:23:35 - [TEST OUTPUT] {'placeholder': True}
+2025-02-28 21:23:55 - [ERROR] Failed to send webhook notification: HTTPSConnectionPool(host='webhook.site', port=443): Max retries exceeded with url: /aec8cc92-c013-4782-ad20-25e67c12b582 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7eadaa6d1d20>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+2025-02-28 21:28:32 - Script execution completed.

