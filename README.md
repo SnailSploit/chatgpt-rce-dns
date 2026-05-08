@@ -278,3 +278,21 @@ This research is released under the MIT License. See [LICENSE](LICENSE) for deta
 ---
 
 > **Disclaimer:** This research is provided for educational and defensive purposes only. The techniques documented here should only be used in authorized security assessments. The researcher accepts no liability for misuse of this information.
+
+<!-- snailsploit-backlink:start -->
+
+---
+
+## 📚 Documentation & Author
+
+This project's full writeup, methodology, and related research lives at:
+
+**[https://snailsploit.com/security-research/general/chatgpt-canvas-rce-dns-exfiltration/](https://snailsploit.com/security-research/general/chatgpt-canvas-rce-dns-exfiltration/)**
+
+Created by **Kai Aizen** — independent offensive security researcher.
+
+[snailsploit.com](https://snailsploit.com) · [Research](https://snailsploit.com/research) · [Frameworks](https://snailsploit.com/frameworks) · [GitHub](https://github.com/SnailSploit) · [LinkedIn](https://linkedin.com/in/kaiaizen) · [ResearchGate](https://www.researchgate.net/profile/Kai-Aizen-2) · [X/Twitter](https://x.com/SnailSploit)
+
+> *Same attack. Different substrate.*
+
+<!-- snailsploit-backlink:end -->
